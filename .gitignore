@@ -38,3 +38,5 @@ airflow/logs/
 # Generated
 *.generated.sql
 *.jar
+synthea/
+*.bak

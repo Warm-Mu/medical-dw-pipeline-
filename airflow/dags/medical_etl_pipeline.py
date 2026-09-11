@@ -33,7 +33,10 @@ from airflow.operators.dummy import DummyOperator
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 ETL_DIR = PROJECT_DIR / "etl"
 DBT_DIR = PROJECT_DIR / "dbt"
-SYNTHEA_DIR = PROJECT_DIR / "synthea" / "output" / "csv"
+SYNTHEA_DIR = PROJECT_DIR / "synthea" / "output_historical" / "csv"
+
+VENV_PYTHON = "/home/ubuntu/medical-dw-pipeline/.venv/bin/python"
+VENV_DBT = "/home/ubuntu/medical-dw-pipeline/.venv/bin/dbt"
 
 default_args = {
     "owner": "data_team",
@@ -92,7 +95,8 @@ run_etl = BashOperator(
     task_id="run_etl",
     bash_command=(
         f"cd {PROJECT_DIR} && "
-        f"python -m etl.pipeline --csv-dir {SYNTHEA_DIR} --verbose"
+        f"{VENV_PYTHON} -m etl.pipeline --csv-dir {SYNTHEA_DIR} "
+        f"--batch-id airflow_{{{{ ds_nodash }}}} --no-truncate --verbose"
     ),
     dag=dag,
 )
@@ -104,7 +108,7 @@ run_etl = BashOperator(
 
 run_dbt_ods = BashOperator(
     task_id="run_dbt_ods",
-    bash_command=f"cd {DBT_DIR} && dbt run --models tag:ods --target dev",
+    bash_command=f"cd {DBT_DIR} && {VENV_DBT} run --models tag:ods --target dev",
     dag=dag,
 )
 
@@ -115,7 +119,7 @@ run_dbt_ods = BashOperator(
 
 run_dbt_dwd = BashOperator(
     task_id="run_dbt_dwd",
-    bash_command=f"cd {DBT_DIR} && dbt run --models tag:dwd --target dev",
+    bash_command=f"cd {DBT_DIR} && {VENV_DBT} run --models tag:dwd --target dev",
     dag=dag,
 )
 
@@ -126,7 +130,7 @@ run_dbt_dwd = BashOperator(
 
 run_dbt_dws = BashOperator(
     task_id="run_dbt_dws",
-    bash_command=f"cd {DBT_DIR} && dbt run --models tag:dws --target dev",
+    bash_command=f"cd {DBT_DIR} && {VENV_DBT} run --models tag:dws --target dev",
     dag=dag,
 )
 
@@ -137,7 +141,7 @@ run_dbt_dws = BashOperator(
 
 run_dbt_ads = BashOperator(
     task_id="run_dbt_ads",
-    bash_command=f"cd {DBT_DIR} && dbt run --models tag:ads --target dev",
+    bash_command=f"cd {DBT_DIR} && {VENV_DBT} run --models tag:ads --target dev",
     dag=dag,
 )
 
@@ -148,7 +152,7 @@ run_dbt_ads = BashOperator(
 
 run_dbt_test = BashOperator(
     task_id="run_dbt_test",
-    bash_command=f"cd {DBT_DIR} && dbt test --target dev",
+    bash_command=f"cd {DBT_DIR} && {VENV_DBT} test --target dev",
     dag=dag,
 )
 

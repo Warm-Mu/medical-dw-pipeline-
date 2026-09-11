@@ -1,0 +1,125 @@
+{
+  "timestamp": "2026-09-07T11:08:48.668142",
+  "checks": [
+    {
+      "schema": "ods",
+      "table": "conditions",
+      "estimated_rows": 40160
+    },
+    {
+      "schema": "ods",
+      "table": "encounters",
+      "estimated_rows": 62650
+    },
+    {
+      "schema": "ods",
+      "table": "imaging_studies",
+      "estimated_rows": 156946
+    },
+    {
+      "schema": "ods",
+      "table": "medications",
+      "estimated_rows": 54635
+    },
+    {
+      "schema": "ods",
+      "table": "observations",
+      "estimated_rows": 827894
+    },
+    {
+      "schema": "ods",
+      "table": "organizations",
+      "estimated_rows": 816
+    },
+    {
+      "schema": "ods",
+      "table": "patients",
+      "estimated_rows": 1136
+    },
+    {
+      "schema": "ods",
+      "table": "payer_transitions",
+      "estimated_rows": 40425
+    },
+    {
+      "schema": "ods",
+      "table": "payers",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "ods",
+      "table": "procedures",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "ods",
+      "table": "providers",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "dim_date",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "dim_diagnosis",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "dim_organization",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "dim_patient",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "dim_provider",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "fact_diagnosis",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "fact_encounter",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dwd",
+      "table": "fact_medication",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dws",
+      "table": "agg_daily_admissions",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dws",
+      "table": "agg_department_load",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "dws",
+      "table": "agg_patient_segment",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "ads",
+      "table": "drg_analysis",
+      "estimated_rows": -1
+    },
+    {
+      "schema": "ads",
+      "table": "readmission_risk",
+      "estimated_rows": -1
+    }
+  ]
+}

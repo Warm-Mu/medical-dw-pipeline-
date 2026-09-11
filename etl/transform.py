@@ -320,17 +320,31 @@ CLEAN_FUNCTIONS = {
 }
 
 
-def transform_all(dataframes: dict) -> dict[str, pd.DataFrame]:
-    """对所有提取的 DataFrame 执行清洗转换。"""
+def transform_all(dataframes: dict, batch_id: str = "default") -> dict[str, pd.DataFrame]:
+    """对所有提取的 DataFrame 执行清洗转换。
+    
+    Args:
+        dataframes: 从Extract阶段读取的原始DataFrame字典
+        batch_id: 批次标识,写入每张表的_batch_id列,用于数据血缘追溯
+    """
+    from datetime import datetime
+    load_time = datetime.utcnow()  # 记录本次加载时间
+    
     cleaned = {}
     for table_name, df in dataframes.items():
         clean_func = CLEAN_FUNCTIONS.get(table_name)
         if clean_func:
             try:
-                cleaned[table_name] = clean_func(df)
+                cleaned_df = clean_func(df)
+                # 血缘元数据:每张表加两列,追溯数据来源
+                cleaned_df["_batch_id"] = batch_id
+                cleaned_df["_loaded_at"] = load_time
+                cleaned[table_name] = cleaned_df
             except Exception as e:
                 logger.error("清洗 %s 失败: %s", table_name, e)
                 raise
         else:
-            logger.warning("表 %s 没有对应的清洗函数，跳过", table_name)
+            logger.warning("表 %s 没有对应的清洗函数,跳过", table_name)
+    
+    logger.info("Transform 完成 | batch_id=%s | 共处理 %d 张表", batch_id, len(cleaned))
     return cleaned

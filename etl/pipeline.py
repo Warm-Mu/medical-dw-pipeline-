@@ -77,15 +77,16 @@ def run_dbt(target: str = "dev") -> bool:
 @click.option("--no-load", is_flag=True, help="只做 ETL 不写入数据库")
 @click.option("--truncate/--no-truncate", default=True, help="写入前是否清空目标表")
 @click.option("--run-dbt", "run_dbt_flag", is_flag=True, help="ETL 完成后自动运行 dbt")
+@click.option("--batch-id", default="default", help="批次标识,用于数据血缘追溯")
 @click.option("--verbose", "-v", is_flag=True, help="详细日志")
-def main(csv_dir, no_load, truncate, run_dbt_flag, verbose):
+def main(csv_dir, no_load, truncate, run_dbt_flag, batch_id, verbose):
     """医疗数据仓库 ETL Pipeline
 
     执行 Extract → Transform → Load 全流程。
     """
     setup_logging(verbose)
     logger.info("=" * 50)
-    logger.info("医疗数据仓库 ETL Pipeline 启动")
+    logger.info("医疗数据仓库 ETL Pipeline 启动 | batch_id=%s", batch_id)
     logger.info("=" * 50)
 
     # --- Phase 1: Extract ---
@@ -96,8 +97,8 @@ def main(csv_dir, no_load, truncate, run_dbt_flag, verbose):
         sys.exit(1)
 
     # --- Phase 2: Transform ---
-    logger.info("[Phase 2/3] 数据清洗 (Transform)")
-    cleaned_data = transform_all(raw_data)
+    logger.info("[Phase 2/3] 数据清洗 (Transform) | batch_id=%s", batch_id)
+    cleaned_data = transform_all(raw_data, batch_id=batch_id)
 
     # 打印统计
     for table_name, df in cleaned_data.items():
@@ -110,7 +111,15 @@ def main(csv_dir, no_load, truncate, run_dbt_flag, verbose):
     else:
         engine = create_db_engine()
         try:
-            results = load_all(cleaned_data, engine=engine, truncate_first=truncate)
+            use_upsert = not truncate  # truncate=False时用UPSERT
+            results = load_all(
+                cleaned_data,
+                engine=engine,
+                truncate_first=truncate,
+                upsert_on_conflict=use_upsert,
+            )
+            if use_upsert:
+                logger.info("追加模式:启用 ON CONFLICT DO NOTHING(重复主键跳过)")
             total_rows = sum(results.values())
             logger.info("成功写入 %d 行数据到 ODS 层", total_rows)
         finally:

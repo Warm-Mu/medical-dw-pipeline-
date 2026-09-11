@@ -1,7 +1,7 @@
 """数据加载模块 — 将清洗后的 DataFrame 写入 PostgreSQL ODS 层"""
-
 from __future__ import annotations
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 import logging
 from typing import Dict, Optional
 
@@ -34,41 +34,48 @@ def truncate_table(engine, table_name: str) -> None:
         conn.commit()
     logger.info("清空表: %s", table_name)
 
-
+def _upsert_method(table, conn, keys, data_iter):
+    """自定义pandas to_sql method,支持ON CONFLICT DO NOTHING(冲突跳过).
+    
+    用于增量加载场景:主键重复时跳过,不报错.
+    """
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    
+    data = [dict(zip(keys, row)) for row in data_iter]
+    stmt = pg_insert(table.table).values(data)
+    stmt = stmt.on_conflict_do_nothing()  # 遇冲突跳过
+    conn.execute(stmt)
 def load_dataframe(
     engine,
     df: pd.DataFrame,
     table_name: str,
     batch_size: Optional[int] = None,
     if_exists: str = "append",
+    upsert_on_conflict: bool = False,
 ) -> int:
-    """将 DataFrame 写入数据库表。
-
-    Args:
-        engine: SQLAlchemy 引擎
-        df: 要写入的数据
-        table_name: 目标表名（含 schema，如 ods.patients）
-        batch_size: 每批写入行数
-        if_exists: 'append' | 'replace' | 'fail'
-
-    Returns:
-        写入的行数
-    """
+    """将 DataFrame 写入数据库表..."""
+    import time  # 用于计时
     bs = batch_size or etl_config.batch_size
+    total_rows = len(df)  # 提前记录行数,避免to_sql返回值不可靠
+    start = time.time()  # 开始计时
 
     try:
-        # 分批写入，避免大数据量时内存溢出
-        rows = df.to_sql(
+        df.to_sql(
             name=table_name.split(".")[1] if "." in table_name else table_name,
             schema=table_name.split(".")[0] if "." in table_name else None,
             con=engine,
             if_exists=if_exists,
             index=False,
-            method=None,
+            method=_upsert_method if upsert_on_conflict else None,
             chunksize=bs,
         )
-        logger.info("写入 %s: %d 行", table_name, rows)
-        return rows
+        elapsed = time.time() - start
+        rate = total_rows / elapsed if elapsed > 0 else 0
+        logger.info(
+            "写入 %s: %d 行 | 耗时 %.2fs | 速率 %.0f 行/秒",
+            table_name, total_rows, elapsed, rate
+        )
+        return total_rows
     except SQLAlchemyError as e:
         logger.error("写入 %s 失败: %s", table_name, e)
         raise
@@ -78,6 +85,7 @@ def load_all(
     dataframes: Dict[str, pd.DataFrame],
     engine=None,
     truncate_first: bool = True,
+    upsert_on_conflict: bool = False,
 ) -> Dict[str, int]:
     """将清洗后的数据全部加载到 ODS 表。
 
@@ -105,7 +113,7 @@ def load_all(
         try:
             if truncate_first:
                 truncate_table(engine, target_table)
-            rows = load_dataframe(engine, df, target_table)
+            rows = load_dataframe(engine, df, target_table, upsert_on_conflict=upsert_on_conflict)
             results[table_name] = rows
         except Exception as e:
             logger.error("加载 %s → %s 失败: %s", table_name, target_table, e)
